@@ -51,21 +51,54 @@ const SutraWallet = {
     localStorage.setItem(this.historyKey(),JSON.stringify(history.slice(0,50)));
     toast(`+${coins} Sutra Coins earned ✦`); return this.get();
   },
-  spend(value,label='Reward redeemed'){ const cost=Number(value)||0; if(this.get()<cost){toast(`You need ${cost-this.get()} more Sutra Coins.`);return false;} this.set(this.get()-cost); const history=JSON.parse(localStorage.getItem(this.historyKey())||'[]'); history.unshift({label,amount:-cost,date:new Date().toISOString()}); localStorage.setItem(this.historyKey(),JSON.stringify(history.slice(0,50))); return true; }
+  spend(value,label='Reward redeemed'){
+    const cost=Number(value)||0;
+    if(this.get()<cost){
+      toast(`You need ${cost-this.get()} more Sutra Coins.`);
+      return false;
+    }
+    this.set(this.get()-cost);
+    const history=JSON.parse(localStorage.getItem(this.historyKey())||'[]');
+    history.unshift({label,amount:-cost,date:new Date().toISOString()});
+    localStorage.setItem(this.historyKey(),JSON.stringify(history.slice(0,50)));
+    return true;
+  }
 };
 window.SutraWallet=SutraWallet;
 
-function renderPoints(){document.querySelectorAll('.points-balance').forEach(el=>el.textContent=SutraWallet.get());}
-function renderCoinStats(){document.querySelectorAll('.coin-stat').forEach(el=>el.textContent=SutraWallet.get());}
-function toast(message){let el=document.getElementById('toast');if(!el){el=document.createElement('div');el.id='toast';document.body.appendChild(el);}el.textContent=message;el.classList.add('toast-show');clearTimeout(window.__sutraToast);window.__sutraToast=setTimeout(()=>el.classList.remove('toast-show'),2600);}
+function renderPoints(){
+  document.querySelectorAll('.points-balance').forEach(el=>el.textContent=SutraWallet.get());
+}
+
+function renderCoinStats(){
+  document.querySelectorAll('.coin-stat').forEach(el=>el.textContent=SutraWallet.get());
+}
+
+function toast(message){
+  let el=document.getElementById('toast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='toast';
+    document.body.appendChild(el);
+  }
+  el.textContent=message;
+  el.classList.add('toast-show');
+  clearTimeout(window.__sutraToast);
+  window.__sutraToast=setTimeout(()=>el.classList.remove('toast-show'),2600);
+}
+
 window.toast=toast;
-function getInitials(name='PG'){return name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'PG';}
+
+function getInitials(name='PG'){
+  return name.trim().split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase()||'PG';
+}
 
 function renderStreak(){
   const userKey=(SutraAuth.user().email||'guest').toLowerCase();
   const streak=Number(localStorage.getItem('sutra_streak_'+userKey)||0);
   document.querySelectorAll('.streak-count').forEach(el=>el.textContent=streak);
 }
+
 function updateStreak(){
   const userKey=(SutraAuth.user().email||'guest').toLowerCase();
   const today=new Date().toISOString().slice(0,10);
@@ -78,18 +111,32 @@ function updateStreak(){
   renderStreak();
   return next;
 }
+
 function runDailySutra(){
   const today=new Date().toISOString().slice(0,10);
   const userKey=(SutraAuth.user().email||'guest').toLowerCase();
   const last=localStorage.getItem('sutra_daily_quiz_date_'+userKey);
   const claim=document.getElementById('dailyClaim');
   const status=document.getElementById('dailyStatus');
-  if(claim){claim.disabled=last===today;claim.textContent=last===today?'Daily reward claimed ✓':'Claim today’s +25 coins';}
-  if(status&&last===today)status.textContent='You already claimed today’s Daily Sutra. Come back tomorrow.';
+
+  if(claim){
+    claim.disabled=last===today;
+    claim.textContent=last===today?'Daily reward claimed ✓':'Claim today’s +25 coins';
+  }
+
+  if(status&&last===today){
+    status.textContent='You already claimed today’s Daily Sutra. Come back tomorrow.';
+  }
 }
+
 window.claimDailySutra=function(){
   const today=new Date().toISOString().slice(0,10);
-  if(localStorage.getItem('sutra_daily_quiz_date_'+(SutraAuth.user().email||'guest').toLowerCase())===today){toast('Daily Sutra already claimed today.');return;}
+
+  if(localStorage.getItem('sutra_daily_quiz_date_'+(SutraAuth.user().email||'guest').toLowerCase())===today){
+    toast('Daily Sutra already claimed today.');
+    return;
+  }
+
   localStorage.setItem('sutra_daily_quiz_date_'+(SutraAuth.user().email||'guest').toLowerCase(),today);
   SutraWallet.add(25,'Daily Sutra quiz');
   const streak=updateStreak();
@@ -99,62 +146,241 @@ window.claimDailySutra=function(){
 
 // Small helper for a Pokémon-GO-style heritage capture mechanic.
 
-
 const SutraJourney={
- key:'sutra_journey',
- get(){try{return JSON.parse(localStorage.getItem(this.key)||'[]')}catch{return[]}},
- add(city,state,node,type='visit'){const email=(SutraAuth.user().email||'guest').toLowerCase();const list=this.get();const item={id:`${Date.now()}-${Math.random().toString(36).slice(2,6)}`,email,city,state,node:node||'',type,date:new Date().toISOString()};list.unshift(item);localStorage.setItem(this.key,JSON.stringify(list.slice(0,500)));return item},
- forUser(){const email=(SutraAuth.user().email||'guest').toLowerCase();return this.get().filter(x=>x.email===email)}
-};window.SutraJourney=SutraJourney;
-
-const SutraProfile={
- photoKey(){return 'sutra_profile_photo_'+(SutraAuth.user().email||'guest').toLowerCase()},
- getPhoto(){return localStorage.getItem(this.photoKey())||''},
- setPhoto(data){localStorage.setItem(this.photoKey(),data);window.dispatchEvent(new Event('sutra:profile-updated'))},
- clearPhoto(){localStorage.removeItem(this.photoKey());window.dispatchEvent(new Event('sutra:profile-updated'))},
- privacy(){try{return JSON.parse(localStorage.getItem('sutra_privacy')||'{}')}catch{return{}}},
- savePrivacy(data){localStorage.setItem('sutra_privacy',JSON.stringify({...this.privacy(),...data}))}
-};window.SutraProfile=SutraProfile;
-
-window.SutraSettings={
- apply(){const p=SutraProfile.privacy();document.body.classList.toggle('high-contrast',!!p.highContrast);document.body.classList.toggle('large-text',!!p.largeText)},
- locationEnabled(){const p=SutraProfile.privacy();return p.location!==false},
- toggleLocation(v){SutraProfile.savePrivacy({location:!!v});this.apply();},
- deleteAccount(){const email=(SutraAuth.user().email||'guest').toLowerCase();const suffix=btoa(unescape(encodeURIComponent(email))).replace(/[^a-z0-9]/gi,'').slice(0,80);const scrapKey='sutra_scrapbook_'+email;const photoKey=SutraProfile.photoKey();localStorage.removeItem('sutra_auth');localStorage.removeItem('sutra_journey');localStorage.removeItem(scrapKey);localStorage.removeItem(photoKey);localStorage.removeItem('sutra_privacy');Object.keys(localStorage).filter(k=>k.includes(suffix)).forEach(k=>localStorage.removeItem(k));window.location.href='index.html'}
-};
-
-async function registerSutraSW(){if('serviceWorker' in navigator){try{await navigator.serviceWorker.register('sw.js')}catch(e){}}}
-
-window.SutraNodeCapture={
-  key:'sutra_captured_nodes',
-  storageKey(){return this.key+'_'+(SutraAuth.user().email||'guest').toLowerCase()},
-  get(){try{return JSON.parse(localStorage.getItem(this.storageKey())||'[]')}catch{return[]}},
-  capture(id,name,place){
-    const list=this.get(); if(list.includes(id)){toast(`${name} is already in your Heritage Collection.`);return false;}
-    list.push(id);localStorage.setItem(this.storageKey(),JSON.stringify(list));
-    const parts=String(place||'').split(' · ');
-    SutraJourney.add(parts[0]||place,parts[1]||'',name,'heritage-node');
-    localStorage.setItem('sutra_current_context',JSON.stringify({city:parts[0]||'',state:parts[1]||'',node:name,nodeId:id,updated:new Date().toISOString()}));
-    SutraScrapbook.save({title:name,place,type:'Heritage Node',symbol:'🪔'});
-    toast(`Heritage Node unlocked: ${name}`);return true;
+  key:'sutra_journey',
+  get(){
+    try{
+      return JSON.parse(localStorage.getItem(this.key)||'[]')
+    }catch{
+      return[]
+    }
+  },
+  add(city,state,node,type='visit'){
+    const email=(SutraAuth.user().email||'guest').toLowerCase();
+    const list=this.get();
+    const item={
+      id:`${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+      email,
+      city,
+      state,
+      node:node||'',
+      type,
+      date:new Date().toISOString()
+    };
+    list.unshift(item);
+    localStorage.setItem(this.key,JSON.stringify(list.slice(0,500)));
+    return item
+  },
+  forUser(){
+    const email=(SutraAuth.user().email||'guest').toLowerCase();
+    return this.get().filter(x=>x.email===email)
   }
 };
 
-window.addEventListener('storage',()=>{renderPoints();renderCoinStats();});
+window.SutraJourney=SutraJourney;
+
+const SutraProfile={
+  photoKey(){
+    return 'sutra_profile_photo_'+(SutraAuth.user().email||'guest').toLowerCase()
+  },
+  getPhoto(){
+    return localStorage.getItem(this.photoKey())||''
+  },
+  setPhoto(data){
+    localStorage.setItem(this.photoKey(),data);
+    window.dispatchEvent(new Event('sutra:profile-updated'))
+  },
+  clearPhoto(){
+    localStorage.removeItem(this.photoKey());
+    window.dispatchEvent(new Event('sutra:profile-updated'))
+  },
+  privacy(){
+    try{
+      return JSON.parse(localStorage.getItem('sutra_privacy')||'{}')
+    }catch{
+      return{}
+    }
+  },
+  savePrivacy(data){
+    localStorage.setItem('sutra_privacy',JSON.stringify({...this.privacy(),...data}))
+  }
+};
+
+window.SutraProfile=SutraProfile;
+
+window.SutraSettings={
+  apply(){
+    const p=SutraProfile.privacy();
+    document.body.classList.toggle('high-contrast',!!p.highContrast);
+    document.body.classList.toggle('large-text',!!p.largeText)
+  },
+
+  locationEnabled(){
+    const p=SutraProfile.privacy();
+    return p.location!==false
+  },
+
+  toggleLocation(v){
+    SutraProfile.savePrivacy({location:!!v});
+    this.apply();
+  },
+
+  deleteAccount(){
+    const email=(SutraAuth.user().email||'guest').toLowerCase();
+    const suffix=btoa(unescape(encodeURIComponent(email))).replace(/[^a-z0-9]/gi,'').slice(0,80);
+    const scrapKey='sutra_scrapbook_'+email;
+    const photoKey=SutraProfile.photoKey();
+
+    localStorage.removeItem('sutra_auth');
+    localStorage.removeItem('sutra_journey');
+    localStorage.removeItem(scrapKey);
+    localStorage.removeItem(photoKey);
+    localStorage.removeItem('sutra_privacy');
+
+    Object.keys(localStorage)
+      .filter(k=>k.includes(suffix))
+      .forEach(k=>localStorage.removeItem(k));
+
+    window.location.href='index.html'
+  }
+};
+
+
+/* =========================================================
+   UPDATED SERVICE WORKER REGISTRATION
+   ========================================================= */
+
+async function registerSutraSW(){
+  if('serviceWorker' in navigator){
+    try{
+      const r=await navigator.serviceWorker.register('sw.js');
+      await r.update();
+    }catch(e){}
+  }
+}
+
+
+window.SutraNodeCapture={
+  key:'sutra_captured_nodes',
+
+  storageKey(){
+    return this.key+'_'+(SutraAuth.user().email||'guest').toLowerCase()
+  },
+
+  get(){
+    try{
+      return JSON.parse(localStorage.getItem(this.storageKey())||'[]')
+    }catch{
+      return[]
+    }
+  },
+
+  capture(id,name,place){
+    const list=this.get();
+
+    if(list.includes(id)){
+      toast(`${name} is already in your Heritage Collection.`);
+      return false;
+    }
+
+    list.push(id);
+    localStorage.setItem(this.storageKey(),JSON.stringify(list));
+
+    const parts=String(place||'').split(' · ');
+
+    SutraJourney.add(
+      parts[0]||place,
+      parts[1]||'',
+      name,
+      'heritage-node'
+    );
+
+    localStorage.setItem(
+      'sutra_current_context',
+      JSON.stringify({
+        city:parts[0]||'',
+        state:parts[1]||'',
+        node:name,
+        nodeId:id,
+        updated:new Date().toISOString()
+      })
+    );
+
+    SutraScrapbook.save({
+      title:name,
+      place,
+      type:'Heritage Node',
+      symbol:'🪔'
+    });
+
+    toast(`Heritage Node unlocked: ${name}`);
+    return true;
+  }
+};
+
+window.addEventListener('storage',()=>{
+  renderPoints();
+  renderCoinStats();
+});
 
 document.addEventListener('DOMContentLoaded',()=>{
   const currentPage=(location.pathname.split('/').pop()||'index.html').toLowerCase();
+
   document.querySelectorAll('.main-nav a').forEach(link=>{
-    const href=(link.getAttribute('href')||'').split('?')[0].split('#')[0].toLowerCase();
+    const href=(link.getAttribute('href')||'')
+      .split('?')[0]
+      .split('#')[0]
+      .toLowerCase();
+
     link.classList.toggle('active',href===currentPage);
   });
+
   const protectedPage=!!document.body.dataset.page;
-  if(protectedPage&&!SutraAuth.isLoggedIn()){window.location.href='index.html';return;}
-  renderPoints();renderCoinStats();runDailySutra();renderStreak();SutraSettings.apply();registerSutraSW();
+
+  if(protectedPage&&!SutraAuth.isLoggedIn()){
+    window.location.href='index.html';
+    return;
+  }
+
+  renderPoints();
+  renderCoinStats();
+  runDailySutra();
+  renderStreak();
+  SutraSettings.apply();
+  registerSutraSW();
+
   const user=SutraAuth.user();
-  const nameEl=document.getElementById('userName');if(nameEl)nameEl.textContent=(user.name||'EXPLORER').toUpperCase();
-  const avatar=document.getElementById('profileButton');if(avatar)avatar.textContent=getInitials(user.name);
-  const banner=document.getElementById('travellerBanner');if(banner&&user.travellerType==='international')banner.style.display='flex';
+
+  const nameEl=document.getElementById('userName');
+  if(nameEl)nameEl.textContent=(user.name||'EXPLORER').toUpperCase();
+
+  const avatar=document.getElementById('profileButton');
+  if(avatar)avatar.textContent=getInitials(user.name);
+
+  const banner=document.getElementById('travellerBanner');
+  if(banner&&user.travellerType==='international'){
+    banner.style.display='flex';
+  }
+
   const form=document.getElementById('loginForm');
-  if(form)form.addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('loginName')?.value.trim();const email=document.getElementById('loginEmail')?.value.trim();const travellerType=document.getElementById('travellerType')?.value||'india';if(!name||!email)return;const first=SutraAuth.login(name,email,travellerType);if(first)toast('Welcome to SUTRA-GEO · 50 free Sutra Coins ✦');window.location.href='explore.html';});
+
+  if(form){
+    form.addEventListener('submit',e=>{
+      e.preventDefault();
+
+      const name=document.getElementById('loginName')?.value.trim();
+      const email=document.getElementById('loginEmail')?.value.trim();
+      const travellerType=document.getElementById('travellerType')?.value||'india';
+
+      if(!name||!email)return;
+
+      const first=SutraAuth.login(name,email,travellerType);
+
+      if(first){
+        toast('Welcome to SUTRA-GEO · 50 free Sutra Coins ✦');
+      }
+
+      window.location.href='explore.html';
+    });
+  }
 });
