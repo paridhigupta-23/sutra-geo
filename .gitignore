@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+config.js
+backend/.venv/
+backend/__pycache__/
+__pycache__/
+*.pyc
+.DS_Store
+
+.git-old/

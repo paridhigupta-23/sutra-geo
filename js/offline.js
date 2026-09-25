@@ -1,0 +1,9 @@
+function currentPackCity(){
+  try{const c=JSON.parse(localStorage.getItem('sutra_current_context')||'null');if(c?.city)return c.city;}catch(e){}
+  const city=document.getElementById('mapCity')?.value; if(city&&city!=='all')return city;
+  const state=document.getElementById('mapState')?.value; if(state&&state!=='all'){const n=(window.SUTRA_HERITAGE||[]).find(x=>x.state===state);if(n)return n.city;}
+  return 'India';
+}
+async function downloadHeritagePack(){const city=currentPackCity();const nodes=(window.SUTRA_HERITAGE||[]).filter(x=>x.city===city).slice(0,8);const pack={name:`${city} Heritage Pack`,size:'Prototype cache',items:['Map','Stories','Quest information','Heritage images']};const urls=['explore.html','map.html','ar.html','ai.html','js/heritageData.js','style.css',...nodes.map(x=>x.image)];try{const cache=await caches.open('sutra-geo-v5');for(const url of urls){try{await cache.add(url)}catch(e){}}localStorage.setItem('sutra_offline_pack',JSON.stringify({downloaded:true,date:new Date().toISOString(),pack,city}));const btn=document.getElementById('offlinePackBtn');if(btn)btn.textContent=`✓ ${city} Pack saved`;const el=document.getElementById('offlineStatus');if(el)el.textContent=`${city} Heritage Pack is cached for low-connectivity demo use.`;toast(`${city} Heritage Pack downloaded to this browser.`)}catch(e){toast('Offline pack could not be downloaded in this browser.')}}
+function renderOfflineStatus(){const el=document.getElementById('offlineStatus');if(!el)return;try{const x=JSON.parse(localStorage.getItem('sutra_offline_pack')||'null');if(x?.downloaded){const btn=document.getElementById('offlinePackBtn');if(btn)btn.textContent=`✓ ${x.city||x.pack?.name||'Heritage'} Pack saved`;el.textContent=`${x.city||'Heritage'} Heritage Pack is cached for low-connectivity demo use.`}}catch(e){}}
+window.downloadHeritagePack=downloadHeritagePack;document.addEventListener('DOMContentLoaded',renderOfflineStatus);
